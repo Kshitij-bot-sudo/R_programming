@@ -1,0 +1,52 @@
+set.seed(42)
+spotify_data <- data.frame(
+  track_id = paste0("T", 1:100),
+  track_name = paste("Song", 1:100),
+  danceability = runif(100, 0.2, 0.9),
+  energy = runif(100, 0.3, 1.0),
+  valence = runif(100, 0.1, 0.9),
+  acousticness = runif(100, 0.0, 0.8),
+  loudness = runif(100, -15, 0),
+  instrumentalness = runif(100, 0.0, 0.7)
+)
+
+# Step 2: Select features for clustering
+clustering_features <- spotify_data %>%
+  select(danceability, energy, valence, acousticness, loudness, instrumentalness)
+
+# Step 3: Scale the data
+scaled_data <- scale(clustering_features)
+
+# Step 4: Elbow Method (to determine optimal K)
+fviz_nbclust(scaled_data, kmeans, method = "wss", k.max = 10) +
+  labs(title = "Elbow Method for Optimal K")
+
+# Step 5: Perform K-Means Clustering
+set.seed(123)
+optimal_k <- 4
+kmeans_result <- kmeans(scaled_data, centers = optimal_k, nstart = 25)
+
+# Step 6: Add cluster labels to original dataset
+spotify_data$cluster <- as.factor(kmeans_result$cluster)
+
+# Step 7: Display cluster-wise mean values
+cluster_means <- spotify_data %>%
+  group_by(cluster) %>%
+  summarise(across(danceability:instrumentalness, mean))
+
+print(cluster_means)
+
+# Step 8: Visualize the clusters
+fviz_cluster(
+  kmeans_result,
+  data = scaled_data,
+  geom = "point",
+  ellipse.type = "convex",
+  palette = "jco",
+  main = paste("Spotify Music Clustering (K=", optimal_k, ")"),
+  ggtheme = theme_minimal()
+)
+
+# Step 9: Save result to CSV
+write.csv(spotify_data, "spotify_music_clusters.csv", row.names = FALSE)
+
